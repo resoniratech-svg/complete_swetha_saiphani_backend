@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { appointmentsService } from '@/modules/appointments/appointments.service.js';
-import { createAppointmentSchema, updateAppointmentSchema, appointmentQuerySchema } from '@/modules/appointments/appointments.types.js';
+import { createAppointmentSchema, updateAppointmentSchema, appointmentQuerySchema, createPublicAppointmentSchema } from '@/modules/appointments/appointments.types.js';
 import { sendSuccess, sendCreated, sendNoContent } from '@/utils/response.js';
 
 /**
@@ -73,8 +73,8 @@ export async function createPublicAppointment(
     next: NextFunction
 ): Promise<void> {
     try {
-        console.log('Received Public Appointment Body:', req.body);
-        const appointment = await appointmentsService.createPublic(req.body);
+        const input = createPublicAppointmentSchema.parse(req.body);
+        const appointment = await appointmentsService.createPublic(input);
         sendCreated(res, appointment, 'Appointment request submitted successfully');
     } catch (error) {
         next(error);

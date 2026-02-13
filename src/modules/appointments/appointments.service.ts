@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database.js';
 import { NotFoundError, ValidationError } from '../../middleware/errorHandler.js';
-import { CreateAppointmentInput, UpdateAppointmentInput, AppointmentQueryInput, AppointmentResponse } from './appointments.types.js';
+import { CreateAppointmentInput, UpdateAppointmentInput, AppointmentQueryInput, AppointmentResponse, CreatePublicAppointmentInput } from './appointments.types.js';
 import { PaginatedResponse } from '../users/users.types.js';
 
 export class AppointmentsService {
@@ -30,17 +30,20 @@ export class AppointmentsService {
                 status: { in: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'] },
                 OR: [
                     {
+                        AND: [
+                            { scheduledAt: { lte: input.scheduledAt } },
+                            // Since we don't have an 'endTime' column, we'll assume a fixed duration or calculate it.
+                            // But Prisma doesn't support easy time addition in 'where'.
+                            // However, we can check if any existing appointment's start + its duration (default 30) overflows new start.
+                            // For simplicity, we'll check if any appointment starts within 30 mins before this one.
+                            { scheduledAt: { gt: new Date(input.scheduledAt.getTime() - 30 * 60000) } }
+                        ]
+                    },
+                    {
                         scheduledAt: {
                             gte: input.scheduledAt,
                             lt: endTime
                         }
-                    },
-                    {
-                        scheduledAt: {
-                            lte: input.scheduledAt,
-                        },
-                        // Simplified overlap check: if an existing appointment starts before this one but ends after this one starts
-                        // We'll just check if the new start is before existing end
                     }
                 ],
             },
@@ -64,8 +67,7 @@ export class AppointmentsService {
         return this.formatAppointment(appointment);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async createPublic(input: any): Promise<AppointmentResponse> {
+    async createPublic(input: CreatePublicAppointmentInput): Promise<AppointmentResponse> {
         const { firstName, lastName, email, phone, doctorId, scheduledAt, paymentType } = input;
 
         // 1. Find or Create Patient by Phone
