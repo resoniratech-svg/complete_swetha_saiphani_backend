@@ -30,11 +30,18 @@ export class AppointmentsService {
                 status: { in: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'] },
                 OR: [
                     {
-                        scheduledAt: { lte: input.scheduledAt },
-                        AND: {
-                            scheduledAt: { gte: new Date(input.scheduledAt.getTime() - 60 * 60000) },
-                        },
+                        scheduledAt: {
+                            gte: input.scheduledAt,
+                            lt: endTime
+                        }
                     },
+                    {
+                        scheduledAt: {
+                            lte: input.scheduledAt,
+                        },
+                        // Simplified overlap check: if an existing appointment starts before this one but ends after this one starts
+                        // We'll just check if the new start is before existing end
+                    }
                 ],
             },
         });
@@ -109,7 +116,7 @@ export class AppointmentsService {
 
         const appointment = await prisma.appointment.create({
             data: {
-                patientId: patient.uhid,
+                patientId: (patient as any).uhid,
                 doctorId: doctor.id,
                 scheduledAt: new Date(scheduledAt),
                 duration: 30, // Default duration

@@ -28,6 +28,16 @@ export const appointmentQuerySchema = z.object({
     dateTo: z.string().transform((s) => new Date(s)).optional(),
 });
 
+export const createPublicAppointmentSchema = z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email(),
+    phone: z.string().min(10),
+    doctorId: z.string().min(1),
+    scheduledAt: z.string().transform((s) => new Date(s)),
+    paymentType: z.string().optional(),
+});
+
 export type CreateAppointmentInput = z.infer<typeof createAppointmentSchema>;
 export type CreatePublicAppointmentInput = z.infer<typeof createPublicAppointmentSchema>;
 export type UpdateAppointmentInput = z.infer<typeof updateAppointmentSchema>;

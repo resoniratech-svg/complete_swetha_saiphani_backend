@@ -11,7 +11,8 @@ export async function downloadDocument(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { type, id } = req.params;
+        const { type } = req.params;
+        const id = req.params.id as string;
         const userId = req.user!.userId;
         const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
 
@@ -22,11 +23,14 @@ export async function downloadDocument(
 
         // 1. Fetch Document Data / File
         if (type === 'prescriptions') {
-            const prescription = await prisma.prescription.findUnique({
+            const prescription = (await prisma.prescription.findUnique({
                 where: { id },
                 include: { patient: true, doctor: true }
-            });
+            })) as any;
             if (!prescription) throw new AppError('Prescription not found', 404);
+            if (!prescription.patient || !prescription.doctor) {
+                throw new AppError('Prescription data incomplete', 500);
+            }
 
             // Check Authorization (Patient can only download their own)
             if (req.user!.role === 'PATIENT' && prescription.patient.userId !== userId) {
@@ -46,12 +50,12 @@ export async function downloadDocument(
             // For this implementation, let's assume valid 'reports' are LabTestResults with a file path OR data
 
             // Logic for LabTestResult
-            const labResult = await prisma.labTestResult.findFirst({
+            const labResult = (await prisma.labTestResult.findFirst({
                 where: { orderId: id }, // Assuming ID passed is OrderID or ResultID
                 include: { order: { include: { patient: true } } }
-            });
+            })) as any;
 
-            if (labResult) {
+            if (labResult && labResult.order && labResult.order.patient) {
                 if (req.user!.role === 'PATIENT' && labResult.order.patient.userId !== userId) {
                     throw new AppError('Unauthorized', 403);
                 }
@@ -85,7 +89,7 @@ export async function downloadDocument(
 
         // 2. Check Download History
         // Map route param type to Enum
-        const docTypeEnum = type === 'prescriptions' ? 'PRESCRIPTION' : 'LAB_REPORT';
+        const docTypeEnum: any = type === 'prescriptions' ? 'PRESCRIPTION' : 'LAB_REPORT';
 
         const historyCount = await prisma.downloadHistory.count({
             where: {

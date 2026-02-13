@@ -17,7 +17,7 @@ export const getUnreadCount = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.userId;
 
     const success = await notificationService.markAsRead(id, userId);

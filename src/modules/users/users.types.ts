@@ -34,6 +34,7 @@ export interface UserResponse {
         lastName: string;
         phone?: string | null;
         specialization?: string | null;
+        department?: string | null;
     };
 }
 

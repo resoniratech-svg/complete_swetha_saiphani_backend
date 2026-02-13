@@ -1,4 +1,4 @@
-import { prisma } from "../../config/database";
+import { prisma } from "../../config/database.js";
 import { Prisma } from "@prisma/client";
 
 export class NotificationService {
@@ -29,7 +29,7 @@ export class NotificationService {
         read: true,
       },
     });
-    
+
     return result.count > 0;
   }
 
@@ -46,7 +46,7 @@ export class NotificationService {
 
     return result.count;
   }
-  
+
   // Helper to create notification (for internal use or future endpoints)
   async createNotification(data: {
     recipientId: string;

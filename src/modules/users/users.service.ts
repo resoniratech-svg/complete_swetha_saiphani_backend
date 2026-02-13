@@ -160,9 +160,8 @@ export class UsersService {
                 firstName: profile.firstName,
                 lastName: profile.lastName,
                 phone: profile.phone,
-                // @ts-ignore - TS might complain if type alias not updated but interface is
-                specialization: (profile as any).specialization,
-                department: (profile as any).department,
+                specialization: ('specialization' in profile) ? (profile as any).specialization : null,
+                department: ('department' in profile) ? (profile as any).department : null,
             } : undefined,
         };
     }
