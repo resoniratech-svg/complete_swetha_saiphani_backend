@@ -8,10 +8,11 @@ RUN apt-get update -y && \
   rm -rf /var/lib/apt/lists/*
 
 # Copy package files first for Docker layer caching
-COPY package*.json ./
+COPY package.json ./
+COPY package-lock.json* ./
 
-# Install all dependencies (npm ci with fallback to npm install)
-RUN npm ci || npm install
+# Install dependencies (use npm ci if lockfile exists, otherwise npm install)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copy Prisma schema and generate client inside this container
 COPY prisma ./prisma/
