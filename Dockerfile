@@ -7,17 +7,17 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Install all dependencies (including dev for build)
 RUN npm ci
+
+# Generate Prisma client
+RUN npx prisma generate
 
 # Copy source
 COPY tsconfig.json ./
 COPY src ./src/
 
-# Generate Prisma client
-RUN npx prisma generate
-
-# Build TypeScript
+# Build TypeScript + resolve path aliases
 RUN npm run build
 
 # Production stage
@@ -25,33 +25,21 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install bash, netcat, wget, and openssl
-RUN apk add --no-cache bash netcat-openbsd wget openssl
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-  adduser -S nodejs -u 1001
-
-# Copy package files
+# Copy package files and install production deps
 COPY package*.json ./
+RUN npm ci --omit=dev
 
-# Install production dependencies only
-RUN npm ci --only=production
-
-# Copy Prisma files and start script
+# Copy Prisma schema + generated client from builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
-COPY start.sh ./
-RUN chmod +x start.sh
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
-# Give ownership of the app directory to the nodejs user
-RUN chown -R nodejs:nodejs /app
-
-# Set user
-USER nodejs
+# Copy start script
+COPY start.sh ./
+RUN chmod +x start.sh
 
 # Environment
 ENV NODE_ENV=production
@@ -60,8 +48,7 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Start command using the script
 CMD ["./start.sh"]

@@ -94,14 +94,16 @@ async function main(): Promise<void> {
 
         // Create and start app
         const app = createApp();
+        const HOST = '0.0.0.0';
+        const PORT = Number(process.env.PORT) || config.port;
 
-        const server = app.listen(config.port, () => {
+        const server = app.listen(PORT, HOST, () => {
             logger.info(
-                { port: config.port, env: config.nodeEnv },
-                `✅ Server running on http://localhost:${config.port}`
+                { port: PORT, host: HOST, env: config.nodeEnv },
+                `✅ Server running on ${HOST}:${PORT}`
             );
-            logger.info(`📚 Swagger docs available at http://localhost:${config.port}/docs`);
-            logger.info(`❤️ Health check at http://localhost:${config.port}/health`);
+            logger.info(`📚 Swagger docs available at /docs`);
+            logger.info(`❤️ Health check at /health`);
 
             if (config.isProduction) {
                 logger.info('🔒 Running in PRODUCTION mode');
