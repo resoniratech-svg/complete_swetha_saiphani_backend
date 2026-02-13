@@ -1,47 +1,26 @@
-# Build stage
-FROM node:20-slim AS builder
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# Install OpenSSL (required by Prisma)
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install system dependencies required by Prisma and health checks
+RUN apt-get update -y && \
+  apt-get install -y openssl ca-certificates wget && \
+  rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Copy package files first for Docker layer caching
 COPY package*.json ./
+
+# Install all dependencies (npm ci with fallback to npm install)
+RUN npm ci || npm install
+
+# Copy Prisma schema and generate client inside this container
 COPY prisma ./prisma/
-
-# Install all dependencies (including dev for build)
-RUN npm ci
-
-# Generate Prisma client
 RUN npx prisma generate
 
-# Copy source
+# Copy source and build
 COPY tsconfig.json ./
 COPY src ./src/
-
-# Build TypeScript + resolve path aliases
 RUN npm run build
-
-# Production stage
-FROM node:20-slim AS production
-
-WORKDIR /app
-
-# Install OpenSSL (required by Prisma at runtime)
-RUN apt-get update -y && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
-
-# Copy package files and install production deps
-COPY package*.json ./
-RUN npm ci --omit=dev
-
-# Copy Prisma schema + generated client from builder
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-
-# Copy built application
-COPY --from=builder /app/dist ./dist
 
 # Copy start script
 COPY start.sh ./
